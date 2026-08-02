@@ -1,0 +1,97 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: python-backend/Dockerfile
+    ports: ["8000:8000"]
+    volumes:
+      - ./python-backend/models:/app/models:ro
+      - ./python-backend/data:/app/data
+    environment:
+      SHELFMIND_CELERY_BROKER_URL: redis://redis:6379/0
+      SHELFMIND_CELERY_RESULT_BACKEND: redis://redis:6379/0
+    env_file:
+      - ./python-backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Background worker for the async scan pipeline (Upload -> Create Scan
+  # Job -> [worker] -> Detection -> Analytics -> Save Results -> Job
+  # Completed). Shares the backend image/code and the same data volume (so
+  # it can read the temp upload the API writes and the model weights) but
+  # runs `celery worker` instead of the API server. Scale with
+  # `docker compose up --scale worker=3` if scan volume warrants it.
+  worker:
+    build:
+      context: .
+      dockerfile: python-backend/Dockerfile
+    command: celery -A shelfmind.tasks.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - ./python-backend/models:/app/models:ro
+      - ./python-backend/data:/app/data
+    environment:
+      SHELFMIND_CELERY_BROKER_URL: redis://redis:6379/0
+      SHELFMIND_CELERY_RESULT_BACKEND: redis://redis:6379/0
+    env_file:
+      - ./python-backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Periodic safety-net sweep that fails stuck jobs and removes any
+  # orphaned temp upload files (see shelfmind/tasks/scan_tasks.py ::
+  # cleanup_orphaned_temp_files). Not required for scans to work, but keeps
+  # `data/tmp` from accumulating files if a worker ever dies mid-task.
+  beat:
+    build:
+      context: .
+      dockerfile: python-backend/Dockerfile
+    command: celery -A shelfmind.tasks.celery_app beat --loglevel=info
+    volumes:
+      - ./python-backend/models:/app/models:ro
+      - ./python-backend/data:/app/data
+    environment:
+      SHELFMIND_CELERY_BROKER_URL: redis://redis:6379/0
+      SHELFMIND_CELERY_RESULT_BACKEND: redis://redis:6379/0
+    env_file:
+      - ./python-backend/.env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: .
+      dockerfile: artifacts/api-server/Dockerfile
+    environment:
+      ML_API_URL: http://backend:8000
+    ports: ["3000:3000"]
+    depends_on: [backend]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: artifacts/shelfmind/Dockerfile
+    ports: ["5173:80"]
+    depends_on: [gateway]
+    restart: unless-stopped
+
+volumes:
+  redis-data:

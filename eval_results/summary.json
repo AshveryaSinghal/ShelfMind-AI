@@ -1,0 +1,77 @@
+{
+  "weights": "/kaggle/input/models/ashveryasinghal/sku110/pytorch/default/1/best.pt",
+  "data_yaml": "/kaggle/working/data.yaml",
+  "device": "0",
+  "imgsz": 640,
+  "ultralytics_version": "8.4.106",
+  "python_version": "3.12.13",
+  "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+  "headline_metrics": {
+    "precision": 0.9093,
+    "recall": 0.8431,
+    "f1": 0.8749,
+    "map50": 0.8875,
+    "map50_95": 0.5557
+  },
+  "confidence_sweep": [
+    {
+      "confidence": 0.1,
+      "precision": 0.9082,
+      "recall": 0.8626,
+      "f1": 0.8848,
+      "map50": 0.8852
+    },
+    {
+      "confidence": 0.2,
+      "precision": 0.9082,
+      "recall": 0.8626,
+      "f1": 0.8848,
+      "map50": 0.8682
+    },
+    {
+      "confidence": 0.25,
+      "precision": 0.9064,
+      "recall": 0.8639,
+      "f1": 0.8846,
+      "map50": 0.8593
+    },
+    {
+      "confidence": 0.35,
+      "precision": 0.9225,
+      "recall": 0.8468,
+      "f1": 0.883,
+      "map50": 0.832
+    },
+    {
+      "confidence": 0.5,
+      "precision": 0.9535,
+      "recall": 0.7887,
+      "f1": 0.8633,
+      "map50": 0.7755
+    },
+    {
+      "confidence": 0.6,
+      "precision": 0.9704,
+      "recall": 0.7278,
+      "f1": 0.8318,
+      "map50": 0.7177
+    },
+    {
+      "confidence": 0.75,
+      "precision": 0.9917,
+      "recall": 0.4287,
+      "f1": 0.5987,
+      "map50": 0.4225
+    }
+  ],
+  "inference_speed": {
+    "runs": 50,
+    "mean_ms": 10.9,
+    "median_ms": 10.9,
+    "p95_ms": 11.13,
+    "min_ms": 10.56,
+    "max_ms": 11.57,
+    "fps_mean": 91.75
+  },
+  "sample_predictions_saved": 12
+}

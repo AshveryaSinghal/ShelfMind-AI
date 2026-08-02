@@ -1,0 +1,919 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: ShelfMind AI — Retail shelf analytics API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: shelfmind
+    description: ShelfMind shelf analytics operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /shelfmind/dashboard:
+    get:
+      operationId: getDashboard
+      tags: [shelfmind]
+      summary: Dashboard summary
+      description: Aggregated stats across all shelves
+      responses:
+        "200":
+          description: Dashboard summary data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /shelfmind/shelves:
+    get:
+      operationId: listShelves
+      tags: [shelfmind]
+      summary: List all shelves with latest metrics
+      responses:
+        "200":
+          description: List of shelf summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShelfSummary"
+
+  /shelfmind/shelves/{shelfId}/scans:
+    get:
+      operationId: getShelfHistory
+      tags: [shelfmind]
+      summary: List scan history for a shelf
+      parameters:
+        - name: shelfId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of scan records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScanRecord"
+        "404":
+          description: Shelf not found
+
+  /shelfmind/shelves/{shelfId}/compare:
+    get:
+      operationId: compareShelfScans
+      tags: [shelfmind]
+      summary: Compare the latest two scans for a shelf
+      parameters:
+        - name: shelfId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Comparison result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComparisonResult"
+        "400":
+          description: Not enough scans to compare
+        "404":
+          description: Shelf not found
+
+  /shelfmind/shelves/{shelfId}/alerts:
+    get:
+      operationId: getShelfAlertHistory
+      tags: [shelfmind]
+      summary: Full alert history for a single shelf (every alert ever raised, across all scans)
+      parameters:
+        - name: shelfId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of alerts for this shelf, most recent first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+        "404":
+          description: Shelf not found
+
+  /shelfmind/alerts:
+    get:
+      operationId: listAlerts
+      tags: [shelfmind]
+      summary: List current alerts across all shelves
+      description: >-
+        Only returns alerts raised by each shelf's most recent scan — alerts
+        from earlier scans are superseded once a newer scan is recorded, even
+        if the newer scan raises zero alerts. Use
+        /shelfmind/shelves/{shelfId}/alerts for the full history of a shelf.
+      responses:
+        "200":
+          description: List of current active alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+
+  /shelfmind/report:
+    get:
+      operationId: getStoreReport
+      tags: [shelfmind]
+      summary: Generate store-level natural language report
+      responses:
+        "200":
+          description: Store report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreReport"
+
+  /shelfmind/assistant:
+    post:
+      operationId: askAssistant
+      tags: [shelfmind]
+      summary: Ask the AI assistant a question about shelf analytics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantInput"
+      responses:
+        "200":
+          description: Assistant response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantResponse"
+
+  /shelfmind/analytics/demand:
+    get:
+      operationId: getDemandAnalytics
+      tags: [shelfmind]
+      summary: Per-shelf demand stats and store-wide demand rankings
+      responses:
+        "200":
+          description: Demand analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemandAnalytics"
+
+  /shelfmind/analytics/report:
+    get:
+      operationId: getAnalyticsReport
+      tags: [shelfmind]
+      summary: Data-backed insights and recommendations derived from scan history
+      responses:
+        "200":
+          description: Analytics report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsReport"
+
+  /shelfmind/analytics/sales:
+    get:
+      operationId: getStoreSalesEstimate
+      tags: [shelfmind]
+      summary: Estimated units sold, store-wide, derived from restock cycles across all shelves
+      responses:
+        "200":
+          description: Store-wide sales estimate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSalesEstimate"
+
+  /shelfmind/analytics/sales/{shelf_id}:
+    get:
+      operationId: getShelfSalesEstimate
+      tags: [shelfmind]
+      summary: Estimated units sold for a single shelf, derived from restock cycles
+      parameters:
+        - name: shelf_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shelf sales estimate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShelfSalesEstimate"
+
+  /shelfmind/analytics/peak-hours:
+    get:
+      operationId: getPeakHours
+      tags: [shelfmind]
+      summary: Peak selling hours split by weekday vs weekend, from owner-configured windows or auto-detection
+      responses:
+        "200":
+          description: Peak hours analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PeakHoursAnalysis"
+
+  /shelfmind/schedule:
+    get:
+      operationId: getSchedule
+      tags: [shelfmind]
+      summary: Get the store's auto-scan schedule
+      responses:
+        "200":
+          description: Schedule configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleConfig"
+    put:
+      operationId: updateSchedule
+      tags: [shelfmind]
+      summary: Update the store's auto-scan schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleInput"
+      responses:
+        "200":
+          description: Updated schedule configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleConfig"
+        "400":
+          description: Invalid schedule input
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    DashboardSummary:
+      type: object
+      properties:
+        shelves_scanned:
+          type: integer
+        total_scans:
+          type: integer
+        products_detected:
+          type: integer
+        avg_occupancy_pct:
+          type: number
+        avg_health_score:
+          type: number
+        avg_empty_space_pct:
+          type: number
+        avg_utilization_pct:
+          type: number
+        low_stock_products:
+          type: integer
+        restock_alerts:
+          type: integer
+        active_alerts:
+          type: integer
+        critical_shelves:
+          type: integer
+        warning_shelves:
+          type: integer
+        healthy_shelves:
+          type: integer
+        trend_summary:
+          type: object
+          properties:
+            improving:
+              type: integer
+            declining:
+              type: integer
+            stable:
+              type: integer
+      required:
+        - shelves_scanned
+        - total_scans
+        - products_detected
+        - avg_occupancy_pct
+        - avg_health_score
+        - avg_empty_space_pct
+        - avg_utilization_pct
+        - low_stock_products
+        - restock_alerts
+        - active_alerts
+
+    ShelfSummary:
+      type: object
+      properties:
+        shelf_id:
+          type: string
+        last_scan_id:
+          type: ["string", "null"]
+        last_scan_at:
+          type: ["string", "null"]
+        occupancy_pct:
+          type: ["number", "null"]
+        health_score:
+          type: ["number", "null"]
+        health_label:
+          type: ["string", "null"]
+        restocking_priority:
+          type: ["string", "null"]
+        active_alert_count:
+          type: integer
+      required:
+        - shelf_id
+        - active_alert_count
+
+    OccupancyMetrics:
+      type: object
+      properties:
+        shelf_occupancy_pct:
+          type: number
+        empty_space_pct:
+          type: number
+        shelf_utilization_pct:
+          type: number
+        product_density_per_m2:
+          type: number
+        total_detection_area_px:
+          type: number
+        shelf_area_px:
+          type: number
+      required:
+        - shelf_occupancy_pct
+        - empty_space_pct
+        - shelf_utilization_pct
+        - product_density_per_m2
+        - total_detection_area_px
+        - shelf_area_px
+
+    HealthComponents:
+      type: object
+      properties:
+        occupancy:
+          type: number
+        confidence:
+          type: number
+        gap:
+          type: number
+        utilization:
+          type: number
+        stability:
+          type: number
+      required:
+        - occupancy
+        - confidence
+        - gap
+        - utilization
+        - stability
+
+    HealthBreakdown:
+      type: object
+      properties:
+        score:
+          type: number
+        label:
+          type: string
+        components:
+          $ref: "#/components/schemas/HealthComponents"
+      required:
+        - score
+        - label
+        - components
+
+    GapAnalysis:
+      type: object
+      properties:
+        gap_count:
+          type: integer
+        largest_gap_px:
+          type: number
+        largest_gap_ratio:
+          type: number
+        empty_zone_count:
+          type: integer
+      required:
+        - gap_count
+        - largest_gap_px
+        - largest_gap_ratio
+        - empty_zone_count
+
+    DetectionSummary:
+      type: object
+      properties:
+        count:
+          type: integer
+        mean_confidence:
+          type: number
+        inference_time_ms:
+          type: number
+        image_width:
+          type: integer
+        image_height:
+          type: integer
+      required:
+        - count
+        - mean_confidence
+        - inference_time_ms
+        - image_width
+        - image_height
+
+    RestockingRec:
+      type: object
+      properties:
+        shelf_id:
+          type: string
+        priority:
+          type: string
+        reason:
+          type: string
+      required:
+        - shelf_id
+        - priority
+        - reason
+
+    Alert:
+      type: object
+      properties:
+        shelf_id:
+          type: string
+        severity:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+      required:
+        - shelf_id
+        - severity
+        - code
+        - message
+        - timestamp
+
+    ScanRecord:
+      type: object
+      properties:
+        scan_id:
+          type: ["string", "null"]
+        shelf_id:
+          type: string
+        timestamp:
+          type: string
+        health_score:
+          type: number
+        health_label:
+          type: string
+        occupancy_pct:
+          type: number
+        empty_space_pct:
+          type: number
+        detection_count:
+          type: integer
+        restocking_priority:
+          type: string
+        report_text:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+      required:
+        - shelf_id
+        - timestamp
+        - health_score
+        - health_label
+        - occupancy_pct
+        - empty_space_pct
+        - detection_count
+        - restocking_priority
+
+    ScanResult:
+      type: object
+      properties:
+        scan_id:
+          type: string
+        detection:
+          $ref: "#/components/schemas/DetectionSummary"
+        occupancy:
+          $ref: "#/components/schemas/OccupancyMetrics"
+        gaps:
+          $ref: "#/components/schemas/GapAnalysis"
+        health:
+          $ref: "#/components/schemas/HealthBreakdown"
+        restocking:
+          $ref: "#/components/schemas/RestockingRec"
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alert"
+        report:
+          type: string
+      required:
+        - scan_id
+        - detection
+        - occupancy
+        - gaps
+        - health
+        - restocking
+        - alerts
+        - report
+
+    ComparisonResult:
+      type: object
+      properties:
+        baseline_scan_id:
+          type: ["string", "null"]
+        latest_scan_id:
+          type: ["string", "null"]
+        baseline_timestamp:
+          type: string
+        latest_timestamp:
+          type: string
+        occupancy_delta:
+          type: number
+        health_delta:
+          type: number
+        detection_count_delta:
+          type: integer
+        utilization_delta:
+          type: number
+        trend:
+          type: string
+      required:
+        - baseline_timestamp
+        - latest_timestamp
+        - occupancy_delta
+        - health_delta
+        - detection_count_delta
+        - utilization_delta
+        - trend
+
+    StoreReport:
+      type: object
+      properties:
+        report:
+          type: string
+        generated_at:
+          type: string
+      required:
+        - report
+        - generated_at
+
+    AssistantInput:
+      type: object
+      properties:
+        question:
+          type: string
+        shelf_ids:
+          type: ["array", "null"]
+          items:
+            type: string
+      required:
+        - question
+
+    AssistantResponse:
+      type: object
+      properties:
+        answer:
+          type: string
+        shelf_ids_used:
+          type: array
+          items:
+            type: string
+      required:
+        - answer
+        - shelf_ids_used
+
+    ShelfDemandStats:
+      type: object
+      properties:
+        shelf_id:
+          type: string
+        scan_count:
+          type: integer
+        low_stock_detections:
+          type: integer
+        restock_recommendations:
+          type: integer
+        avg_health_score:
+          type: number
+        health_trend:
+          type: string
+        depletion_rate_pct_per_scan:
+          type: ["number", "null"]
+        demand_score:
+          type: number
+      required:
+        - shelf_id
+        - scan_count
+        - low_stock_detections
+        - restock_recommendations
+        - avg_health_score
+        - health_trend
+        - demand_score
+
+    DemandRanking:
+      type: object
+      properties:
+        label:
+          type: string
+        shelf_id:
+          type: ["string", "null"]
+        value:
+          type: ["number", "null"]
+        unit:
+          type: string
+      required:
+        - label
+        - shelf_id
+        - value
+        - unit
+
+    DemandAnalytics:
+      type: object
+      properties:
+        shelves:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShelfDemandStats"
+        rankings:
+          type: array
+          items:
+            $ref: "#/components/schemas/DemandRanking"
+      required:
+        - shelves
+        - rankings
+
+    DepletionCycle:
+      type: object
+      properties:
+        shelf_id:
+          type: string
+        start_scan_id:
+          type: string
+        start_timestamp:
+          type: string
+        end_scan_id:
+          type: ["string", "null"]
+        end_timestamp:
+          type: ["string", "null"]
+        restock_scan_id:
+          type: ["string", "null"]
+        peak_count:
+          type: integer
+        trough_count:
+          type: integer
+        units_sold:
+          type: integer
+        closed:
+          type: boolean
+      required:
+        - shelf_id
+        - start_scan_id
+        - start_timestamp
+        - end_scan_id
+        - end_timestamp
+        - restock_scan_id
+        - peak_count
+        - trough_count
+        - units_sold
+        - closed
+
+    ShelfSalesEstimate:
+      type: object
+      properties:
+        shelf_id:
+          type: string
+        scan_count:
+          type: integer
+        confirmed_units_sold:
+          type: integer
+        estimated_units_sold_in_progress:
+          type: integer
+        total_estimated_units_sold:
+          type: integer
+        restock_events_detected:
+          type: integer
+        cycles:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepletionCycle"
+      required:
+        - shelf_id
+        - scan_count
+        - confirmed_units_sold
+        - estimated_units_sold_in_progress
+        - total_estimated_units_sold
+        - restock_events_detected
+        - cycles
+
+    StoreSalesEstimate:
+      type: object
+      properties:
+        shelves:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShelfSalesEstimate"
+        total_confirmed_units_sold:
+          type: integer
+        total_estimated_units_sold_in_progress:
+          type: integer
+        total_estimated_units_sold:
+          type: integer
+      required:
+        - shelves
+        - total_confirmed_units_sold
+        - total_estimated_units_sold_in_progress
+        - total_estimated_units_sold
+
+    HourlyRestockBreakdown:
+      type: object
+      properties:
+        hour:
+          type: string
+        restock_cycles:
+          type: integer
+      required:
+        - hour
+        - restock_cycles
+
+    PeakHoursAnalysis:
+      type: object
+      properties:
+        source:
+          type: string
+          enum: [user, auto]
+          description: "'user' when the store owner has configured peak windows on the scan schedule; 'auto' when derived from restock-cycle history."
+        sufficient_data:
+          type: boolean
+        weekday_peak_hours:
+          type: array
+          items:
+            type: string
+        weekend_peak_hours:
+          type: array
+          items:
+            type: string
+        note:
+          type: string
+        restock_events_analyzed:
+          type: integer
+        weekday_hourly_breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlyRestockBreakdown"
+        weekend_hourly_breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/HourlyRestockBreakdown"
+      required:
+        - source
+        - sufficient_data
+        - weekday_peak_hours
+        - weekend_peak_hours
+
+    Insight:
+      type: object
+      properties:
+        title:
+          type: string
+        reason:
+          type: string
+        recommendation:
+          type: string
+      required:
+        - title
+        - reason
+        - recommendation
+
+    AnalyticsReport:
+      type: object
+      properties:
+        insights:
+          type: array
+          items:
+            $ref: "#/components/schemas/Insight"
+        sufficient_data:
+          type: boolean
+        note:
+          type: string
+      required:
+        - insights
+        - sufficient_data
+        - note
+
+    PeakWindow:
+      type: object
+      properties:
+        start:
+          type: string
+        end:
+          type: string
+      required:
+        - start
+        - end
+
+    ScheduleConfig:
+      type: object
+      properties:
+        store_id:
+          type: integer
+        enabled:
+          type: boolean
+        timezone:
+          type: string
+        opening_time:
+          type: string
+        closing_time:
+          type: string
+        peak_windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/PeakWindow"
+        weekend_peak_windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/PeakWindow"
+        peak_interval_minutes:
+          type: integer
+        offpeak_interval_minutes:
+          type: integer
+        updated_at:
+          type: ["string", "null"]
+        current_interval_minutes:
+          type: ["integer", "null"]
+      required:
+        - enabled
+        - timezone
+        - opening_time
+        - closing_time
+        - peak_windows
+        - weekend_peak_windows
+        - peak_interval_minutes
+        - offpeak_interval_minutes
+
+    ScheduleInput:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        opening_time:
+          type: string
+        closing_time:
+          type: string
+        peak_windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/PeakWindow"
+        weekend_peak_windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/PeakWindow"
+        peak_interval_minutes:
+          type: integer
+        offpeak_interval_minutes:
+          type: integer
+      required:
+        - enabled
+        - opening_time
+        - closing_time

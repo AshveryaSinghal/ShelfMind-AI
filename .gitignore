@@ -1,0 +1,60 @@
+### --- Node / pnpm monorepo (root, artifacts/*, lib/*, scripts) ---
+node_modules/
+.pnpm-store/
+dist/
+build/
+*.tsbuildinfo
+.turbo/
+.cache/
+.vite/
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files
+.env
+.env.*
+!.env.example
+
+### --- Python / uv backend ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+
+# Runtime / generated data (backend writes here at runtime)
+python-backend/data/heatmaps/
+python-backend/data/images/
+python-backend/data/tmp/
+python-backend/data/*.log
+python-backend/data/*.log.*
+
+# ML model weights (large binaries — track separately via Git LFS or a release asset, not raw commits)
+python-backend/models/*.pt
+python-backend/models/*.onnx
+python-backend/models/*.pth
+!python-backend/models/README.md
+
+### --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+### --- Docker ---
+*.env.docker
+
+### --- Misc ---
+*.local
+.history/
